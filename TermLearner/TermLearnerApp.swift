@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import WidgetKit
 
 @main
 struct TermLearnerApp: App {
@@ -43,6 +44,18 @@ struct TermLearnerApp: App {
             }
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    static func refreshWidget(terms: [Term]) {
+        let due = terms.filter { $0.isDueForReview }
+        let data = WidgetData(
+            dueCount: due.count,
+            learnedCount: terms.filter { $0.isLearned }.count,
+            totalCount: terms.count,
+            streak: UserDefaults.standard.integer(forKey: "currentStreak"),
+            nextDueWord: due.first?.word
+        )
+        WidgetStore.save(data)
     }
 
     private func handleDeepLink(_ url: URL) {

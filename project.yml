@@ -40,6 +40,7 @@ targets:
         ENABLE_PREVIEWS: "YES"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_ENTITLEMENTS: TermLearner/TermLearner.entitlements
       configs:
         Debug:
           DEBUG_INFORMATION_FORMAT: dwarf
@@ -48,11 +49,29 @@ targets:
           DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
           SWIFT_OPTIMIZATION_LEVEL: "-O"
 
+  TermLearnerWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: TermLearnerWidget
+    settings:
+      base:
+        INFOPLIST_FILE: TermLearnerWidget/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.termlearner.app.widget
+        TARGETED_DEVICE_FAMILY: "1,2"
+        APPLICATION_EXTENSION_API_ONLY: "YES"
+        CODE_SIGN_ENTITLEMENTS: TermLearnerWidget/TermLearnerWidget.entitlements
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+
 schemes:
   TermLearner:
     build:
       targets:
         TermLearner: all
+        TermLearnerWidget: all
     run:
       config: Debug
       commandLineArguments: {}

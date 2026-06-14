@@ -52,6 +52,7 @@ struct HomeView: View {
         }
         .task {
             updateGreeting()
+            TermLearnerApp.refreshWidget(terms: allTerms)
             if notificationService.isAuthorized {
                 await notificationService.scheduleReminders(terms: dueTerms, remindersPerDay: remindersPerDay)
             }

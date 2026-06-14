@@ -319,10 +319,13 @@ struct StudyView: View {
         if let last = lastStudy, Calendar.current.isDateInYesterday(last) {
             defaults.set(streak + 1, forKey: "currentStreak")
         } else if let last = lastStudy, Calendar.current.isDateInToday(last) {
-            // Already studied today, keep streak
+            // Already studied today — keep streak unchanged
         } else {
             defaults.set(1, forKey: "currentStreak")
         }
         defaults.set(Date(), forKey: "lastStudyDate")
+
+        // Tell the widget to update
+        TermLearnerApp.refreshWidget(terms: terms)
     }
 }

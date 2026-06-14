@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import UniformTypeIdentifiers
 
 struct UploadView: View {
     @Environment(\.modelContext) private var modelContext
@@ -18,6 +19,8 @@ struct UploadView: View {
     @State private var showSaveSuccess = false
     @State private var phase: UploadPhase = .idle
     @State private var showCamera = false
+    @State private var showCSVPicker = false
+    @State private var csvError: String?
 
     enum UploadPhase { case idle, preview, review, saving }
 
@@ -75,31 +78,38 @@ struct UploadView: View {
                             .multilineTextAlignment(.center)
                     }
 
-                    HStack(spacing: 12) {
-                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                            Label("Photo Library", systemImage: "photo.on.rectangle")
-                                .font(AppFonts.heading(14))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 12)
-                                .background(AppColors.primary)
-                                .clipShape(Capsule())
-                        }
-
-                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                            Button {
-                                showCamera = true
-                            } label: {
-                                Label("Camera", systemImage: "camera.fill")
-                                    .font(AppFonts.heading(14))
-                                    .foregroundStyle(AppColors.primary)
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 12)
-                                    .background(AppColors.primary.opacity(0.12))
+                    VStack(spacing: 10) {
+                        HStack(spacing: 10) {
+                            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                                Label("Photo Library", systemImage: "photo.on.rectangle")
+                                    .font(AppFonts.heading(13))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 11)
+                                    .background(AppColors.primary)
                                     .clipShape(Capsule())
                             }
-                            .buttonStyle(.plain)
+
+                            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                                Button { showCamera = true } label: {
+                                    Label("Camera", systemImage: "camera.fill")
+                                        .font(AppFonts.heading(13))
+                                        .foregroundStyle(AppColors.primary)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 11)
+                                        .background(AppColors.primary.opacity(0.12))
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
+
+                        Button { showCSVPicker = true } label: {
+                            Label("Import CSV", systemImage: "doc.text")
+                                .font(AppFonts.caption(13))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(32)
@@ -117,6 +127,18 @@ struct UploadView: View {
                 Task { await processImage(image) }
             }
             .ignoresSafeArea()
+        }
+        .fileImporter(isPresented: $showCSVPicker,
+                      allowedContentTypes: [.commaSeparatedText, .plainText]) { result in
+            switch result {
+            case .success(let url): importCSV(from: url)
+            case .failure(let err): csvError = err.localizedDescription
+            }
+        }
+        .alert("CSV Import Error", isPresented: .constant(csvError != nil)) {
+            Button("OK") { csvError = nil }
+        } message: {
+            Text(csvError ?? "")
         }
     }
 
@@ -387,6 +409,75 @@ struct UploadView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             withAnimation { showSaveSuccess = false }
         }
+    }
+
+    /// Parse a CSV with columns: word, definition[, notes]
+    /// Accepts files exported by Term Learner or any compatible spreadsheet.
+    private func importCSV(from url: URL) {
+        guard url.startAccessingSecurityScopedResource() else {
+            csvError = "Permission denied for this file."
+            return
+        }
+        defer { url.stopAccessingSecurityScopedResource() }
+
+        guard let raw = try? String(contentsOf: url, encoding: .utf8) else {
+            csvError = "Could not read the file."
+            return
+        }
+
+        var lines = raw.components(separatedBy: .newlines).filter { !$0.isEmpty }
+        // Skip header if first cell looks like a header
+        if let first = lines.first?.lowercased(),
+           first.hasPrefix("word") || first.hasPrefix("term") {
+            lines.removeFirst()
+        }
+
+        let parsed: [ExtractedTerm] = lines.compactMap { line in
+            let fields = parseCSVLine(line)
+            guard fields.count >= 2 else { return nil }
+            let word = fields[0].trimmingCharacters(in: .whitespaces)
+            let definition = fields[1].trimmingCharacters(in: .whitespaces)
+            guard !word.isEmpty, !definition.isEmpty else { return nil }
+            let notes = fields.count >= 3 ? fields[2].trimmingCharacters(in: .whitespaces) : ""
+            return ExtractedTerm(word: word, definition: definition, notes: notes)
+        }
+
+        guard !parsed.isEmpty else {
+            csvError = "No valid terms found. CSV must have at least two columns: word, definition."
+            return
+        }
+
+        extractedTerms = parsed
+        copyrightWarning = nil
+        phase = .review
+    }
+
+    private func parseCSVLine(_ line: String) -> [String] {
+        var fields: [String] = []
+        var current = ""
+        var inQuotes = false
+        var idx = line.startIndex
+
+        while idx < line.endIndex {
+            let ch = line[idx]
+            if ch == "\"" {
+                let next = line.index(after: idx)
+                if inQuotes && next < line.endIndex && line[next] == "\"" {
+                    current.append("\"")
+                    idx = line.index(after: next)
+                    continue
+                }
+                inQuotes.toggle()
+            } else if ch == "," && !inQuotes {
+                fields.append(current)
+                current = ""
+            } else {
+                current.append(ch)
+            }
+            idx = line.index(after: idx)
+        }
+        fields.append(current)
+        return fields
     }
 }
 
