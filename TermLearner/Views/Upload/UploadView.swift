@@ -17,6 +17,7 @@ struct UploadView: View {
     @State private var newCollectionName = ""
     @State private var showSaveSuccess = false
     @State private var phase: UploadPhase = .idle
+    @State private var showCamera = false
 
     enum UploadPhase { case idle, preview, review, saving }
 
@@ -74,14 +75,31 @@ struct UploadView: View {
                             .multilineTextAlignment(.center)
                     }
 
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        Text("Choose Photo")
-                            .font(AppFonts.heading(15))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 32)
-                            .padding(.vertical, 12)
-                            .background(AppColors.primary)
-                            .clipShape(Capsule())
+                    HStack(spacing: 12) {
+                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                            Label("Photo Library", systemImage: "photo.on.rectangle")
+                                .font(AppFonts.heading(14))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(AppColors.primary)
+                                .clipShape(Capsule())
+                        }
+
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            Button {
+                                showCamera = true
+                            } label: {
+                                Label("Camera", systemImage: "camera.fill")
+                                    .font(AppFonts.heading(14))
+                                    .foregroundStyle(AppColors.primary)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 12)
+                                    .background(AppColors.primary.opacity(0.12))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
                 .padding(32)
@@ -91,6 +109,14 @@ struct UploadView: View {
         .onChange(of: selectedPhoto) { _, newValue in
             guard let item = newValue else { return }
             Task { await loadImage(from: item) }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPickerView { image in
+                showCamera = false
+                guard let image else { return }
+                Task { await processImage(image) }
+            }
+            .ignoresSafeArea()
         }
     }
 
@@ -299,7 +325,10 @@ struct UploadView: View {
     private func loadImage(from item: PhotosPickerItem) async {
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data) else { return }
+        await processImage(image)
+    }
 
+    private func processImage(_ image: UIImage) async {
         await MainActor.run {
             selectedImage = image
             isProcessing = true

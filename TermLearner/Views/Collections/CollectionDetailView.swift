@@ -10,6 +10,8 @@ struct CollectionDetailView: View {
     @State private var filterMode: FilterMode = .all
     @State private var termToEdit: Term?
     @State private var showAddTerm = false
+    @State private var exportURL: URL?
+    @State private var showExportSheet = false
 
     enum FilterMode: String, CaseIterable {
         case all = "All"
@@ -72,11 +74,21 @@ struct CollectionDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 12) {
-                        Button {
-                            showAddTerm = true
+                        Menu {
+                            Button {
+                                showAddTerm = true
+                            } label: {
+                                Label("Add Term", systemImage: "plus")
+                            }
+                            Button {
+                                exportCollection()
+                            } label: {
+                                Label("Export CSV", systemImage: "square.and.arrow.up")
+                            }
                         } label: {
-                            Image(systemName: "plus")
+                            Image(systemName: "ellipsis.circle")
                         }
+
                         if !collection.terms.filter({ $0.isDueForReview }).isEmpty {
                             Button {
                                 showStudy = true
@@ -96,6 +108,11 @@ struct CollectionDetailView: View {
             }
             .sheet(isPresented: $showAddTerm) {
                 AddTermSheet(collection: collection)
+            }
+            .sheet(isPresented: $showExportSheet) {
+                if let url = exportURL {
+                    ShareSheet(items: [url])
+                }
             }
         }
     }
@@ -157,6 +174,32 @@ struct CollectionDetailView: View {
         }
         try? modelContext.save()
     }
+
+    private func exportCollection() {
+        var csv = "Word,Definition,Notes,Mastery Level,Times Correct,Times Incorrect\n"
+        for term in collection.terms.sorted(by: { $0.word < $1.word }) {
+            let fields = [term.word, term.definition, term.notes,
+                          "\(term.masteryLevel)", "\(term.timesCorrect)", "\(term.timesIncorrect)"]
+            csv += fields.map { "\"\($0.replacingOccurrences(of: "\"", with: "\"\""))\"" }.joined(separator: ",")
+            csv += "\n"
+        }
+
+        let fileName = "\(collection.name.replacingOccurrences(of: " ", with: "_"))_terms.csv"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        try? csv.write(to: url, atomically: true, encoding: .utf8)
+        exportURL = url
+        showExportSheet = true
+    }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 struct TermEditSheet: View {

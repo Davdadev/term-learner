@@ -25,24 +25,7 @@
     <key>NSCameraUsageDescription</key>
     <string>Term Learner uses the camera to capture vocabulary lists and extract terms using AI.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Term Learner accesses your photos to let you upload images containing vocabulary terms.</string>
-    <key>UIApplicationSceneManifest</key>
-    <dict>
-        <key>UIApplicationSupportsMultipleScenes</key>
-        <true/>
-        <key>UISceneConfigurations</key>
-        <dict>
-            <key>UIWindowSceneSessionRoleApplication</key>
-            <array>
-                <dict>
-                    <key>UISceneConfigurationName</key>
-                    <string>Default Configuration</string>
-                    <key>UISceneDelegateClassName</key>
-                    <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-                </dict>
-            </array>
-        </dict>
-    </dict>
+    <string>Term Learner accesses your photos to upload images containing vocabulary terms.</string>
     <key>UILaunchScreen</key>
     <dict/>
     <key>UISupportedInterfaceOrientations</key>
@@ -62,16 +45,17 @@
     <dict>
         <key>NSAllowsArbitraryLoads</key>
         <false/>
-        <key>NSExceptionDomains</key>
-        <dict>
-            <key>api.anthropic.com</key>
-            <dict>
-                <key>NSExceptionAllowsInsecureHTTPLoads</key>
-                <false/>
-                <key>NSIncludesSubdomains</key>
-                <true/>
-            </dict>
-        </dict>
     </dict>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.termlearner.app</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>termlearner</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>

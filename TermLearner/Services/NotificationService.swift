@@ -65,6 +65,9 @@ final class NotificationService: NSObject, ObservableObject, UNUserNotificationC
             content.sound = .default
             content.userInfo = ["termID": term.id.uuidString, "definition": term.definition]
             content.categoryIdentifier = AppConstants.notificationCategoryID
+            // Deep-link URL so tapping the notification opens the quiz
+            let encodedDef = term.definition.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            content.targetContentIdentifier = "termlearner://quiz?termID=\(term.id.uuidString)&definition=\(encodedDef)"
 
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
             let request = UNNotificationRequest(

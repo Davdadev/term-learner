@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import Charts
 
-struct ProgressView: View {
+struct ProgressDashboardView: View {
     @Query private var allTerms: [Term]
     @Query private var collections: [TermCollection]
 
@@ -82,8 +82,7 @@ struct ProgressView: View {
             Text("Mastery Distribution")
                 .font(AppFonts.heading())
 
-            if #available(iOS 16.0, *) {
-                Chart {
+                    Chart {
                     ForEach(masteryDistribution, id: \.label) { item in
                         BarMark(
                             x: .value("Level", item.label),
@@ -100,33 +99,10 @@ struct ProgressView: View {
                             if let label = value.as(String.self) {
                                 Text(label)
                                     .font(AppFonts.caption(10))
-                                    .rotationEffect(.degrees(-20))
                             }
                         }
                     }
                 }
-            } else {
-                // Fallback for older OS
-                HStack(alignment: .bottom, spacing: 8) {
-                    ForEach(masteryDistribution, id: \.label) { item in
-                        VStack(spacing: 4) {
-                            Text("\(item.count)")
-                                .font(AppFonts.caption(11))
-                                .foregroundStyle(.secondary)
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(item.color)
-                                .frame(
-                                    width: 36,
-                                    height: max(8, CGFloat(item.count) / CGFloat(allTerms.count) * 120)
-                                )
-                            Text(String(item.label.prefix(3)))
-                                .font(AppFonts.caption(10))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            }
 
             HStack(spacing: 12) {
                 ForEach(masteryDistribution.prefix(3), id: \.label) { item in

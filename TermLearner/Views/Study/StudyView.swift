@@ -15,6 +15,9 @@ struct StudyView: View {
     @State private var cardOffset: CGFloat = 0
     @State private var cardRotation: Double = 0
 
+    private let haptic = UIImpactFeedbackGenerator(style: .medium)
+    private let successHaptic = UINotificationFeedbackGenerator()
+
     private var current: Term? {
         guard currentIndex < terms.count else { return nil }
         return terms[currentIndex]
@@ -135,6 +138,7 @@ struct StudyView: View {
             .rotationEffect(.degrees(cardRotation))
             .onTapGesture {
                 if !isShowingAnswer {
+                    haptic.impactOccurred()
                     withAnimation(.spring(response: 0.35)) {
                         isShowingAnswer = true
                     }
@@ -273,6 +277,12 @@ struct StudyView: View {
 
     private func swipeCard(correct: Bool) {
         guard let term = current else { return }
+
+        if correct {
+            successHaptic.notificationOccurred(.success)
+        } else {
+            successHaptic.notificationOccurred(.error)
+        }
 
         let direction: CGFloat = correct ? 400 : -400
         withAnimation(.spring(response: 0.4)) {
